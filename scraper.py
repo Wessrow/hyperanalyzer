@@ -6,8 +6,10 @@ Code written by Gustav Larsson
 """
 
 import os
+import sys
 import json
 import requests
+from logging_handler import logger
 
 def load_api_key():
     """
@@ -37,30 +39,34 @@ class HyperAPI:
         """
 
         params = f"?symbol={symbol}&apiKey={self.api_key}"
-        # params = f"?symbol={symbol}&apiKey=poop"
-        
+
         response = requests.get(f"{self.base_url}/{resource}{params}")
 
+        print(response.status_code)
+
         if response.status_code == 200:
+            logger.info(response.status_code)
             return response
 
         elif response.status_code == 404:
 
-            message = {"error": response.status_code,
+            data = json.dumps({"status": response.status_code,
                         "message": f"Resource '{resource}' does not exist"
-            }
-            
-            return message
+            })
+
+            logger.error(data)
+            sys.exit(1)
 
         elif response.status_code == 400:
-            
+
             error_message = response.json()["error"]
-            
-            message = {"error": response.status_code,
+
+            data = json.dumps({"status": response.status_code,
                         "message": error_message
-            }
-            
-            return message
+            })
+
+            logger.error(data)
+            sys.exit(1)
 
     def _parse_financials(self, symbol="aapl"):
         """
@@ -80,21 +86,38 @@ class HyperAPI:
                         "Outstanding Shares": quarter["Outstanding Shares"],
                     }
                 })
-            except KeyError as key:
+            except KeyError as error:
                 relevant_info.update({
                     "error": "KeyError",
-                    "missing key": str(key)
+                    "missing key": str(error)
                 })
                 break
 
         return relevant_info
 
-    def _calc_eps(income, shares):
+    def _calc_eps(self, income, shares):
         """
         Small helper function to calculate earnings per share
         """
 
-        return income / shares
+        try:
+            eps = int(income) / int(shares)
+            return round(eps, 2)
+
+        except TypeError as error:
+            return f"Error: {error}"
+
+    def eps_per_quarter(self, symbol):
+        """
+        Returns calculated EPS per quarter available
+        """
+
+        data = self._parse_financials(symbol)
+
+        for quarter in data:
+
+            eps = self._calc_eps(data[quarter]["Net Income"], data[quarter]["Outstanding Shares"])
+
 
 if __name__ == "__main__":
 
@@ -103,11 +126,7 @@ if __name__ == "__main__":
     # financials = testObj._req(resource="financials", symbol="aapl").json()
     financials = testObj._parse_financials(symbol="tsla")
 
-    # print(json.dumps(financials, indent=2))
     # print(financials["financials"])
     print(json.dumps(financials, indent=2))
 
-
-
-
-    
+    # testObj.eps_per_quarter("aapl")
