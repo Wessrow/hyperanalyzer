@@ -62,7 +62,7 @@ class HyperAPI:
             
             return message
 
-    def _parse_financials(self, category, symbol="aapl"):
+    def _parse_financials(self, symbol="aapl"):
         """
         Private helper function to parse relevant financial info
         """
@@ -72,18 +72,41 @@ class HyperAPI:
         raw_info = self._req(resource="financials", symbol=symbol).json()
 
         for quarter in raw_info["financials"]:
-            print(f"{quarter['Net Income']}")
+            try:
+                relevant_info.update({
+                    quarter["Quarter"]:{
+                        "Stock Price": quarter["Stock Price"],
+                        "Net Income": quarter["Net Income"],
+                        "Outstanding Shares": quarter["Outstanding Shares"],
+                    }
+                })
+            except KeyError as key:
+                relevant_info.update({
+                    "error": "KeyError",
+                    "missing key": str(key)
+                })
+                break
+
+        return relevant_info
+
+    def _calc_eps(income, shares):
+        """
+        Small helper function to calculate earnings per share
+        """
+
+        return income / shares
 
 if __name__ == "__main__":
 
     testObj = HyperAPI(load_api_key())
 
-    #financials = testObj._req(resource="financials", symbol="aapl").json()
+    # financials = testObj._req(resource="financials", symbol="aapl").json()
+    financials = testObj._parse_financials(symbol="tsla")
 
-    #print(json.dumps(financials, indent=2))
-    #print(financials["financials"])
+    # print(json.dumps(financials, indent=2))
+    # print(financials["financials"])
+    print(json.dumps(financials, indent=2))
 
-    # print(testObj._req(resource="financials", symbol="poop"))
 
 
 
