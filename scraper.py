@@ -110,13 +110,14 @@ class HyperAPI:
         """
 
         try:
-            eps = round(int(income) / int(shares), 3)
+            eps = round(float(income) / float(shares), 3)
             format_logs(10, "CalculatedEPS", eps)
+
+            return eps
 
         except TypeError as error:
             format_logs(40, "TypeError", error)
-
-        return eps
+            return None
 
     @staticmethod
     def _calc_pe(stock_price, eps):
@@ -124,14 +125,17 @@ class HyperAPI:
         Helper function to calculate price per earnings
         """
 
+        # print(stock_price, eps, type(stock_price), type(eps))
+
         try:
-            pe_ratio = round(int(stock_price) / int(eps), 3)
-            format_logs(10, "CalculatedPE", eps)
+            pe_ratio = round(float(stock_price) / float(eps))
+            format_logs(10, "CalculatedPE", pe_ratio)
+
+            return pe_ratio
 
         except TypeError as error:
             format_logs(40, "TypeError", error)
-
-        return pe_ratio
+            return  None
 
     def eps_per_quarter(self, data):
         """
@@ -139,18 +143,50 @@ class HyperAPI:
         """
 
         parsed_eps = {"symbol":data["symbol"],
-                    "eps_per_quarter":{}}
+                    "data":[]}
 
-        for quarter in data["data"]:
-            for item in quarter.items():
+        for entry in data["data"]:
+            for item in entry.items():
                 eps = self._calc_eps(item[1]["Net Income"], item[1]["Outstanding Shares"])
-                parsed_eps["eps_per_quarter"].update({item[0]:eps})
+                parsed_eps["data"].append({item[0]:eps})
 
         # import json
         # print(json.dumps(parsed_eps, indent=2))
 
         format_logs(20, "ParsedEPS", data["symbol"])
         return parsed_eps
+
+    def pe_per_quarter(self, data):
+        """
+        Returns calculated PE ratio per quarter available
+        """
+
+        parsed_pe = {"symbol":data["symbol"],
+                    "data":[]}
+
+        eps = self.eps_per_quarter(data)
+
+        for entry in zip(data["data"], eps["data"]):
+            for quarter in entry[0]:
+                
+                stock_price = entry[0][quarter]["Stock Price"]
+                eps = entry[1][quarter]
+
+                # format_logs(10, "MathCheck", f"{stock_price}, {eps}")
+
+                if isinstance(stock_price, float) and isinstance(eps, float):
+                    pe_ratio = self._calc_pe(stock_price, eps)
+                    
+                    parsed_pe["data"].append({quarter:pe_ratio})
+
+                else:
+                    print(f"PE is N/A")
+
+        # import json
+        # print(json.dumps(parsed_pe, indent=2))
+
+        format_logs(20, "ParsedPE", data["symbol"])
+        return parsed_pe
 
 if __name__ == "__main__":
 
@@ -164,5 +200,5 @@ if __name__ == "__main__":
 
     test_data = testObj._parse_financials("aapl")
 
-    testObj.eps_per_quarter(test_data)
-    # testObj.pe_per_quarter(test_data)
+    # testObj.eps_per_quarter(test_data)
+    testObj.pe_per_quarter(test_data)
