@@ -20,6 +20,17 @@ def load_api_key():
 
     return api_key
 
+def format_logs(status_code, message):
+    """
+    Helper function to format error messages
+    """
+
+    data = {"type": status_code,
+                "message": message
+    }
+
+    return data
+
 class HyperAPI:
     """
     Class to work with Hypercharts API.
@@ -42,17 +53,15 @@ class HyperAPI:
 
         response = requests.get(f"{self.base_url}/{resource}{params}")
 
-        print(response.status_code)
-
         if response.status_code == 200:
-            logger.info(response.status_code)
-            return response
+            data = format_logs(response.status_code, "Success")
+            logger.info(data)
+
+            result = response
 
         elif response.status_code == 404:
 
-            data = json.dumps({"status": response.status_code,
-                        "message": f"Resource '{resource}' does not exist"
-            })
+            data = format_logs(response.status_code, f"Resource '{resource}' does not exist")
 
             logger.error(data)
             sys.exit(1)
@@ -60,13 +69,12 @@ class HyperAPI:
         elif response.status_code == 400:
 
             error_message = response.json()["error"]
-
-            data = json.dumps({"status": response.status_code,
-                        "message": error_message
-            })
+            data = format_logs(response.status_code, error_message)
 
             logger.error(data)
             sys.exit(1)
+
+        return result
 
     def _parse_financials(self, symbol="aapl"):
         """
@@ -95,7 +103,8 @@ class HyperAPI:
 
         return relevant_info
 
-    def _calc_eps(self, income, shares):
+    @staticmethod
+    def _calc_eps(income, shares):
         """
         Small helper function to calculate earnings per share
         """
@@ -117,6 +126,7 @@ class HyperAPI:
         for quarter in data:
 
             eps = self._calc_eps(data[quarter]["Net Income"], data[quarter]["Outstanding Shares"])
+            print(eps)
 
 
 if __name__ == "__main__":
@@ -124,9 +134,9 @@ if __name__ == "__main__":
     testObj = HyperAPI(load_api_key())
 
     # financials = testObj._req(resource="financials", symbol="aapl").json()
-    financials = testObj._parse_financials(symbol="tsla")
+    # financials = testObj._parse_financials(symbol="amzn")
 
     # print(financials["financials"])
-    print(json.dumps(financials, indent=2))
+    # print(json.dumps(financials, indent=2))
 
-    # testObj.eps_per_quarter("aapl")
+    testObj.eps_per_quarter("aapl")
