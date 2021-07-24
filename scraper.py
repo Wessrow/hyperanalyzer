@@ -7,7 +7,6 @@ Code written by Gustav Larsson
 
 import os
 import sys
-import json
 import requests
 from logging_handler import logger
 
@@ -20,16 +19,16 @@ def load_api_key():
 
     return api_key
 
-def format_logs(status_code, message):
+def format_logs(level, message_type, message):
     """
     Helper function to format error messages
     """
 
-    data = {"type": status_code,
+    data = {"type": message_type,
                 "message": message
     }
 
-    return data
+    logger.log(level, data)
 
 class HyperAPI:
     """
@@ -54,29 +53,26 @@ class HyperAPI:
         response = requests.get(f"{self.base_url}/{resource}{params}")
 
         if response.status_code == 200:
-            data = format_logs(response.status_code, "Success")
-            logger.info(data)
+            format_logs(20, response.status_code, "Success")
 
             result = response
 
         elif response.status_code == 404:
 
-            data = format_logs(response.status_code, f"Resource '{resource}' does not exist")
+            format_logs(40, response.status_code, f"Resource '{resource}' does not exist")
 
-            logger.error(data)
             sys.exit(1)
 
         elif response.status_code == 400:
 
             error_message = response.json()["error"]
-            data = format_logs(response.status_code, error_message)
+            format_logs(40, response.status_code, error_message)
 
-            logger.error(data)
             sys.exit(1)
 
         return result
 
-    def _parse_financials(self, symbol="aapl"):
+    def _parse_financials(self, symbol):
         """
         Private helper function to parse relevant financial info
         """
@@ -94,13 +90,12 @@ class HyperAPI:
                         "Outstanding Shares": quarter["Outstanding Shares"],
                     }
                 })
+                format_logs(10, "ParsedQuarter", f"{symbol} - {quarter['Quarter']}")
             except KeyError as error:
-                relevant_info.update({
-                    "error": "KeyError",
-                    "missing key": str(error)
-                })
+                format_logs(40, "KeyError", f"symbol: {symbol} - key: {error}")
                 break
 
+        format_logs(20, "ParsedFinancials", symbol)
         return relevant_info
 
     @staticmethod
@@ -110,11 +105,13 @@ class HyperAPI:
         """
 
         try:
-            eps = int(income) / int(shares)
-            return round(eps, 2)
+            eps = round(int(income) / int(shares), 3)
+            format_logs(10, "CalculatedEPS", eps)
 
         except TypeError as error:
-            return f"Error: {error}"
+            format_logs(40, "CalcError", error)
+
+        return eps
 
     def eps_per_quarter(self, symbol):
         """
@@ -122,12 +119,15 @@ class HyperAPI:
         """
 
         data = self._parse_financials(symbol)
+        parsed_eps = {}
 
         for quarter in data:
 
             eps = self._calc_eps(data[quarter]["Net Income"], data[quarter]["Outstanding Shares"])
-            print(eps)
+            parsed_eps.update({quarter:eps})
 
+        format_logs(20, "ParsedEPS", symbol)
+        return parsed_eps
 
 if __name__ == "__main__":
 
