@@ -111,7 +111,7 @@ class HyperAPI:
 
         try:
             eps = round(float(income) / float(shares), 3)
-            format_logs(10, "CalculatedEPS", eps)
+            format_logs(10, "CalculatedEPS", f"{income} / {shares} = {eps}")
 
             return eps
 
@@ -129,7 +129,7 @@ class HyperAPI:
 
         try:
             pe_ratio = round(float(stock_price) / float(eps))
-            format_logs(10, "CalculatedPE", pe_ratio)
+            format_logs(10, "CalculatedPE", f"{stock_price} / {eps} = {pe_ratio}")
 
             return pe_ratio
 
@@ -168,19 +168,19 @@ class HyperAPI:
 
         for entry in zip(data["data"], eps["data"]):
             for quarter in entry[0]:
-                
+
                 stock_price = entry[0][quarter]["Stock Price"]
                 eps = entry[1][quarter]
 
                 # format_logs(10, "MathCheck", f"{stock_price}, {eps}")
 
-                if isinstance(stock_price, float) and isinstance(eps, float):
+                if isinstance(stock_price, (float, int)) and isinstance(eps, (float, int)):
                     pe_ratio = self._calc_pe(stock_price, eps)
-                    
-                    parsed_pe["data"].append({quarter:pe_ratio})
 
                 else:
-                    print(f"PE is N/A")
+                    pe_ratio = "N/A"
+
+                parsed_pe["data"].append({quarter:pe_ratio})
 
         # import json
         # print(json.dumps(parsed_pe, indent=2))
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     # print(financials["financials"])
     # print(json.dumps(financials, indent=2))
 
-    test_data = testObj._parse_financials("aapl")
+    # test_data = testObj._parse_financials("amzn")
 
     # testObj.eps_per_quarter(test_data)
-    testObj.pe_per_quarter(test_data)
+    # testObj.pe_per_quarter(test_data)
