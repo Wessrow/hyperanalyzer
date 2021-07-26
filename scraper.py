@@ -6,6 +6,7 @@ Code written by Gustav Larsson
 """
 
 import os
+import re
 import sys
 import requests
 from logging_handler import logger
@@ -72,7 +73,7 @@ class HyperAPI:
 
         return result
 
-    def _parse_financials(self, symbol):
+    def parse_financials(self, symbol):
         """
         Private helper function to parse relevant financial info
         """
@@ -137,6 +138,45 @@ class HyperAPI:
             format_logs(40, "TypeError", error)
             return  None
 
+    @staticmethod
+    def yearly_income(data):
+        """
+        Adds quarterly net income to whole years
+        """
+
+        whole_years = {"symbol":data["symbol"],
+                    "data":[]}
+
+        # Counters to keep track of loop
+        last_year = 0
+        yearly_net = 0
+
+        for entry in data["data"]:
+            for item in entry.items():
+
+                year = int(re.search(r"([0-9]{2}) Q", item[0]).group(1))
+
+                if year == last_year:
+                    try:
+                        yearly_net += item[1]["Net Income"]
+
+                    except TypeError as error:
+                        yearly_net += 0
+                        format_logs(10, "TypeError", error)
+
+                else:
+                    whole_years["data"].append({f"FY{year-1}":yearly_net})
+                    yearly_net = 0
+                    yearly_net += item[1]["Net Income"]
+
+                last_year = year
+
+        # import json
+        # print(json.dumps(whole_years, indent=2))
+
+        format_logs(20, "AnnualizedIncome", data["symbol"])
+        return whole_years
+
     def eps_per_quarter(self, data):
         """
         Returns calculated EPS per quarter available
@@ -192,13 +232,15 @@ if __name__ == "__main__":
 
     testObj = HyperAPI(load_api_key())
 
-    # financials = testObj._req(resource="financials", symbol="aapl").json()
-    # financials = testObj._parse_financials(symbol="amzn")
-
+    # financials = testObj.parse_financials(symbol="amzn")
     # print(financials["financials"])
+
+    # financials = testObj._req(resource="financials", symbol="aapl").json()
+    # import json
     # print(json.dumps(financials, indent=2))
 
-    # test_data = testObj._parse_financials("amzn")
-
-    # testObj.eps_per_quarter(test_data)
+    test_data = testObj.parse_financials("amzn")
+    # # testObj.eps_per_quarter(test_data)
     # testObj.pe_per_quarter(test_data)
+
+    testObj.yearly_income(test_data)
