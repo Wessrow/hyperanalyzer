@@ -88,11 +88,13 @@ class HyperAPI:
                 relevant_info["data"].append({
                     quarter["Quarter"]:{
                         "Stock Price": quarter["Stock Price"],
+                        "Market Cap": quarter["Market Cap"],
                         "Net Income": quarter["Net Income"],
                         "Outstanding Shares": quarter["Outstanding Shares"],
                     }
                 })
                 format_logs(10, "ParsedQuarter", f"{symbol} - {quarter['Quarter']}")
+
             except KeyError as error:
                 format_logs(40, "KeyError", f"symbol: {symbol} - key: {error}")
                 break
@@ -116,7 +118,7 @@ class HyperAPI:
 
             return eps
 
-        except TypeError as error:
+        except (TypeError, ValueError) as error:
             format_logs(40, "TypeError", error)
             return None
 
@@ -134,7 +136,7 @@ class HyperAPI:
 
             return pe_ratio
 
-        except TypeError as error:
+        except (TypeError, ValueError) as error:
             format_logs(40, "TypeError", error)
             return  None
 
@@ -171,8 +173,8 @@ class HyperAPI:
 
                 last_year = year
 
-        # import json
-        # print(json.dumps(whole_years, indent=2))
+        import json
+        print(json.dumps(whole_years, indent=2))
 
         format_logs(20, "AnnualizedIncome", data["symbol"])
         return whole_years
@@ -190,8 +192,8 @@ class HyperAPI:
                 eps = self._calc_eps(item[1]["Net Income"], item[1]["Outstanding Shares"])
                 parsed_eps["data"].append({item[0]:eps})
 
-        # import json
-        # print(json.dumps(parsed_eps, indent=2))
+        import json
+        print(json.dumps(parsed_eps, indent=2))
 
         format_logs(20, "ParsedEPS", data["symbol"])
         return parsed_eps
@@ -211,8 +213,6 @@ class HyperAPI:
 
                 stock_price = entry[0][quarter]["Stock Price"]
                 eps = entry[1][quarter]
-
-                # format_logs(10, "MathCheck", f"{stock_price}, {eps}")
 
                 if isinstance(stock_price, (float, int)) and isinstance(eps, (float, int)):
                     pe_ratio = self._calc_pe(stock_price, eps)
@@ -239,8 +239,8 @@ if __name__ == "__main__":
     # import json
     # print(json.dumps(financials, indent=2))
 
-    test_data = testObj.parse_financials("amzn")
-    # # testObj.eps_per_quarter(test_data)
+    test_data = testObj.parse_financials("jpm")
+    testObj.eps_per_quarter(test_data)
     # testObj.pe_per_quarter(test_data)
 
-    testObj.yearly_income(test_data)
+    # testObj.yearly_income(test_data)
